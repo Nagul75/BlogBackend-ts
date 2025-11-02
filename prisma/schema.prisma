@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Author {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  password String
+  name     String?
+
+  // relations
+  posts Post[] // An author can have multiple posts
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id         String     @id @default(cuid())
+  title      String
+  content    String
+  slug       String     @unique
+  status     PostStatus @default(DRAFT)
+  scoreCount Int        @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime? // Set this timestamp when post is published
+
+  // Relations: Each post belongs to one author
+  Author   Author? @relation(fields: [authorId], references: [id])
+  authorId String?
+
+  // Relation: A post can have many comments
+  comments Comment[]
+}
+
+model Comment {
+  id         String  @id @default(cuid())
+  content    String
+  authorName String? // name of person commenting
+  scoreCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation: Each comment belongs to one post
+  Post   Post?   @relation(fields: [postId], references: [id])
+  postId String?
+}
