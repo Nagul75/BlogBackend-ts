@@ -65,3 +65,10 @@ model Comment {
   Post   Post?   @relation(fields: [postId], references: [id])
   postId String?
 }
+
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt DateTime
+}
