@@ -24,6 +24,7 @@
   "homepage": "https://github.com/Nagul75/BlogBackend-ts#readme",
   "dependencies": {
     "@prisma/client": "^6.18.0",
+    "@quixo3/prisma-session-store": "^3.1.13",
     "@types/bcryptjs": "^2.4.6",
     "@types/express-session": "^1.18.2",
     "@types/passport": "^1.0.17",
