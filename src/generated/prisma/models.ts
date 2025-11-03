@@ -10,4 +10,5 @@
 export type * from './models/Author.js'
 export type * from './models/Post.js'
 export type * from './models/Comment.js'
+export type * from './models/Session.js'
 export type * from './commonInputTypes.js'

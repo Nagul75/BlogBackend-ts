@@ -31,3 +31,8 @@ export type Post = Prisma.PostModel
  * 
  */
 export type Comment = Prisma.CommentModel
+/**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
