@@ -28,8 +28,9 @@ model Author {
   // relations
   posts Post[] // An author can have multiple posts
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Comment   Comment[]
 }
 
 model Post {
@@ -64,6 +65,10 @@ model Comment {
   // Relation: Each comment belongs to one post
   Post   Post?   @relation(fields: [postId], references: [id])
   postId String?
+
+  //Relation: Each comment belongs to one author if they exist
+  Author   Author? @relation(fields: [authorId], references: [id])
+  authorId String?
 }
 
 model Session {
