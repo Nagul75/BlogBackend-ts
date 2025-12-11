@@ -1,14 +1,22 @@
-import { Request, Response, NextFunction } from "express"
+import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "../generated/prisma/client.js";
 import * as slugify from "slugify";
-import type { createCommentBody, createPostBody, updatePostBody } from "../types/reqBodyTypes.js";
+import type {
+  createCommentBody,
+  createPostBody,
+  updatePostBody,
+} from "../types/reqBodyTypes.js";
 const prisma = new PrismaClient();
 const realSlugify = (slugify as any).default || slugify;
 
 // Read operations
 async function getAllPosts(req: Request, res: Response, next: NextFunction) {
   try {
-    const posts = await prisma.post.findMany();
+    const posts = await prisma.post.findMany({
+      where: {
+        status: "PUBLISHED",
+      },
+    });
     res.json(posts);
   } catch (error) {
     console.log(error);
@@ -16,13 +24,17 @@ async function getAllPosts(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-async function getPostBySlug(req: Request<{ slug: string }>, res: Response, next: NextFunction) {
+async function getPostBySlug(
+  req: Request<{ slug: string }>,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const slug = req.params.slug;
     const post = await prisma.post.findUnique({
       where: {
-        slug
-      }
+        slug,
+      },
     });
     if (!post) {
       res.status(404).json({ error: "Post not found" });
@@ -35,23 +47,27 @@ async function getPostBySlug(req: Request<{ slug: string }>, res: Response, next
   }
 }
 
-async function getAllComments(req: Request<{ slug: string }>, res: Response, next: NextFunction) {
+async function getAllComments(
+  req: Request<{ slug: string }>,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const slug = req.params.slug;
 
     const post = await prisma.post.findUnique({
       where: {
-        slug
-      }
+        slug,
+      },
     });
 
     if (!post) return res.status(404).json({ error: "Post not found." });
 
     const comments = await prisma.comment.findMany({
       where: {
-        postId: post.id
+        postId: post.id,
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
     });
 
     res.json(comments);
@@ -61,24 +77,31 @@ async function getAllComments(req: Request<{ slug: string }>, res: Response, nex
   }
 }
 
-// Create operations 
-async function createPost(req: Request<{}, unknown, createPostBody>, res: Response, next: NextFunction) {
+// Create operations
+async function createPost(
+  req: Request<{}, unknown, createPostBody>,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const { title, content, publish } = req.body;
     const authorID = req.user ? req.user.id : null;
 
     if (!authorID) {
-      res.status(400).json({ "error": "invalid author" });
+      res.status(400).json({ error: "invalid author" });
       return;
     }
 
     const slug = realSlugify(title, { lower: true, strict: true });
 
     const existing = await prisma.post.findUnique({
-      where: { slug }
+      where: { slug },
     });
 
-    if (existing) return res.status(400).json({ "error": "A post with this title already exists!" });
+    if (existing)
+      return res
+        .status(400)
+        .json({ error: "A post with this title already exists!" });
 
     const post = await prisma.post.create({
       data: {
@@ -87,8 +110,8 @@ async function createPost(req: Request<{}, unknown, createPostBody>, res: Respon
         slug,
         status: publish ? "PUBLISHED" : "DRAFT",
         publishedAt: publish ? new Date() : null,
-        Author: { connect: { id: authorID } }
-      }
+        Author: { connect: { id: authorID } },
+      },
     });
 
     return res.status(201).json(post);
@@ -98,17 +121,20 @@ async function createPost(req: Request<{}, unknown, createPostBody>, res: Respon
   }
 }
 
-
-async function createComment(req: Request<{ slug: string }, unknown, createCommentBody>, res: Response, next: NextFunction) {
+async function createComment(
+  req: Request<{ slug: string }, unknown, createCommentBody>,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const slug = req.params.slug;
     const { content, authorName } = req.body;
 
-    // Find post 
+    // Find post
     const post = await prisma.post.findUnique({
       where: {
         slug,
-      }
+      },
     });
 
     if (!post) return res.status(404).json({ error: "Post not found!" });
@@ -120,23 +146,25 @@ async function createComment(req: Request<{ slug: string }, unknown, createComme
           content,
           authorName: req.user.name ?? "Author",
           Post: { connect: { id: post.id } },
-          Author: { connect: { id: req.user.id } }
-        }
+          Author: { connect: { id: req.user.id } },
+        },
       });
       return res.status(201).json(comment);
     }
 
-    // anonymous comment 
+    // anonymous comment
     if (!authorName) {
-      return res.status(400).json({ error: "Anonymous comments must include author name." });
+      return res
+        .status(400)
+        .json({ error: "Anonymous comments must include author name." });
     }
 
     const comment = await prisma.comment.create({
       data: {
         content,
         authorName,
-        Post: { connect: { id: post.id } }
-      }
+        Post: { connect: { id: post.id } },
+      },
     });
 
     return res.status(201).json(comment);
@@ -146,23 +174,26 @@ async function createComment(req: Request<{ slug: string }, unknown, createComme
   }
 }
 
-
-// Delete operations 
-async function deletePostBySlug(req: Request<{ slug: string }>, res: Response, next: NextFunction) {
+// Delete operations
+async function deletePostBySlug(
+  req: Request<{ slug: string }>,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const slug = req.params.slug;
 
     const post = await prisma.post.findUnique({
       where: {
         slug,
-      }
+      },
     });
 
     if (!post) return res.status(404).json({ error: "Post not found." });
 
     await prisma.$transaction([
       prisma.comment.deleteMany({ where: { postId: post.id } }),
-      prisma.post.delete({ where: { id: post.id } })
+      prisma.post.delete({ where: { id: post.id } }),
     ]);
 
     res.status(200).json({ success: "Post deleted successfully!" });
@@ -172,15 +203,19 @@ async function deletePostBySlug(req: Request<{ slug: string }>, res: Response, n
   }
 }
 
-async function deleteCommentByID(req: Request<{ slug: string, commentid: string }>, res: Response, next: NextFunction) {
+async function deleteCommentByID(
+  req: Request<{ slug: string; commentid: string }>,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const slug = req.params.slug;
     const commentid = req.params.commentid;
 
     const comment = await prisma.comment.findUnique({
       where: {
-        id: commentid
-      }
+        id: commentid,
+      },
     });
 
     if (!comment) return res.status(404).json({ error: "Comment not found." });
@@ -188,7 +223,7 @@ async function deleteCommentByID(req: Request<{ slug: string, commentid: string 
     await prisma.comment.delete({
       where: {
         id: comment.id,
-      }
+      },
     });
     res.status(200).json({ success: "Comment deleted successfully!" });
   } catch (err) {
@@ -197,8 +232,12 @@ async function deleteCommentByID(req: Request<{ slug: string, commentid: string 
   }
 }
 
-// Update operations 
-async function updatePostBySlug(req: Request<{ slug: string }, unknown, updatePostBody>, res: Response, next: NextFunction) {
+// Update operations
+async function updatePostBySlug(
+  req: Request<{ slug: string }, unknown, updatePostBody>,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const slug = req.params.slug;
     const { title, content, publish } = req.body;
@@ -206,20 +245,23 @@ async function updatePostBySlug(req: Request<{ slug: string }, unknown, updatePo
     const existingPost = await prisma.post.findUnique({
       where: {
         slug,
-      }
+      },
     });
 
-    if (!existingPost) return res.status(404).json({ error: "Post not found." });
+    if (!existingPost)
+      return res.status(404).json({ error: "Post not found." });
 
-    // if title has changed, regenerate slug 
+    // if title has changed, regenerate slug
     let newSlug = existingPost.slug;
     if (title && title !== existingPost.title) {
       newSlug = realSlugify(title, { lower: true, strict: true });
 
-      // check for duplicate slug 
+      // check for duplicate slug
       const dupe = await prisma.post.findUnique({ where: { slug: newSlug } });
       if (dupe && dupe.id !== existingPost.id) {
-        return res.status(400).json({ error: "Another post with same title exists." });
+        return res
+          .status(400)
+          .json({ error: "Another post with same title exists." });
       }
     }
 
@@ -229,9 +271,19 @@ async function updatePostBySlug(req: Request<{ slug: string }, unknown, updatePo
         title: title ?? existingPost.title,
         content: content ?? existingPost.content,
         slug: newSlug,
-        status: publish !== undefined ? publish ? "PUBLISHED" : "DRAFT" : existingPost.status, // if updating publish, else existing
-        publishedAt: publish !== undefined ? publish ? new Date() : null : existingPost.publishedAt,
-      }
+        status:
+          publish !== undefined
+            ? publish
+              ? "PUBLISHED"
+              : "DRAFT"
+            : existingPost.status, // if updating publish, else existing
+        publishedAt:
+          publish !== undefined
+            ? publish
+              ? new Date()
+              : null
+            : existingPost.publishedAt,
+      },
     });
 
     return res.status(200).json(updatedPost);
@@ -241,7 +293,51 @@ async function updatePostBySlug(req: Request<{ slug: string }, unknown, updatePo
   }
 }
 
-export {
-  getAllPosts, getAllComments, getPostBySlug, createPost,
-  createComment, deletePostBySlug, deleteCommentByID, updatePostBySlug,
+// direction can be +1 (upvote) or -1 (downvote).
+async function updateScore(
+  req: Request<
+    { slug: string; commentid: string },
+    unknown,
+    { direction: number }
+  >,
+  res: Response,
+) {
+  const commentid = req.params.commentid;
+  const { direction } = req.body;
+  try {
+    const comment = await prisma.comment.findUnique({
+      where: {
+        id: commentid,
+      },
+    });
+
+    if (!comment) {
+      return res.status(404).json({ error: "Comment Not Found!" });
+    }
+
+    const updatedComment = await prisma.comment.update({
+      where: {
+        id: commentid,
+      },
+      data: {
+        scoreCount: comment.scoreCount + direction,
+      },
+    });
+
+    return res.status(201).json(updatedComment);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to update scoreCount" });
+  }
 }
+
+export {
+  getAllPosts,
+  getAllComments,
+  getPostBySlug,
+  createPost,
+  createComment,
+  deletePostBySlug,
+  deleteCommentByID,
+  updatePostBySlug,
+  updateScore,
+};

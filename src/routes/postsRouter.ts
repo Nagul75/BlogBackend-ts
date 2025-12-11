@@ -8,7 +8,7 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ error: "Not authorized" });
   }
   next();
-}
+};
 
 // Read
 postsRouter.get("/posts", controller.getAllPosts);
@@ -19,11 +19,23 @@ postsRouter.get("/posts/:slug/comments", controller.getAllComments);
 postsRouter.post("/admin/posts", isAuthenticated, controller.createPost);
 postsRouter.post("/posts/:slug/comments", controller.createComment);
 
-// Delete 
-postsRouter.delete("/admin/posts/:slug", isAuthenticated, controller.deletePostBySlug);
-postsRouter.delete("/posts/:slug/comments/:commentid", controller.deleteCommentByID);
+// Delete
+postsRouter.delete(
+  "/admin/posts/:slug",
+  isAuthenticated,
+  controller.deletePostBySlug,
+);
+postsRouter.delete(
+  "/posts/:slug/comments/:commentid",
+  controller.deleteCommentByID,
+);
 
 //update
-postsRouter.put("/admin/posts/:slug", isAuthenticated, controller.updatePostBySlug);
+postsRouter.put(
+  "/admin/posts/:slug",
+  isAuthenticated,
+  controller.updatePostBySlug,
+);
+postsRouter.put("/posts/:slug/comments/:commentid", controller.updateScore);
 
 export default postsRouter;
