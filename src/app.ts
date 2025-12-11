@@ -12,12 +12,26 @@ import "./auth/passport.js";
 const app = express();
 const prisma = new PrismaClient();
 
+const whitelist = ["http://localhost:5173"];
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (whitelist.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+
+  // 🔑 This is the critical line on the backend
+  credentials: true,
+
+  // Optional: Define allowed methods and headers
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  allowedHeaders: "Content-Type,Authorization",
+};
+
 app.use(express.json());
-app.use(
-  cors({
-    credentials: true,
-  }),
-);
+app.use(cors(corsOptions));
 
 app.use(
   session({
