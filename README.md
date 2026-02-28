@@ -1,10 +1,11 @@
 # Blog Platform — Backend  
 **REST API for a Production-Style Blogging System**
 
+![Blog-platform](https://github.com/user-attachments/assets/664f88ba-8903-4797-af52-2cf706038999)
+
 This repository contains the backend service for a full-stack blog platform. It exposes a secure, role-aware REST API for managing users, posts, comments, and votes, with a strong emphasis on authentication, authorization, and data integrity.
 
 The backend is designed to resemble real production services rather than a simple CRUD demo.
-
 ---
 
 ## Overview
